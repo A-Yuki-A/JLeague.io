@@ -14,36 +14,44 @@
   <header>
     <h1>Jリーグ年俸分析ツール（箱ひげ図）</h1>
     <p class="subtitle">
-      Excelファイル「Jリーグ年俸.xlsx」をアップロードして、チームごとの年俸を箱ひげ図で分析できます。
+      「順位・選手名・年齢・ポジション・チーム・年俸」の列を持つ Excel ファイル
+      <strong>Jリーグ年俸.xlsx</strong> をアップロードして分析します。
     </p>
   </header>
 
   <main>
+    <!-- 1. ファイルアップロード -->
     <section class="panel">
       <h2>1. データのアップロード</h2>
-      <p>
-        年俸データ（例：<strong>順位, 選手名, 年齢, ポジション, チーム, 年俸</strong> の列を持つファイル）を選択してください。
-      </p>
+      <p>Jリーグの年俸データ（.xlsx）ファイルを選択してください。</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls" />
       <p class="note">
-        ※現在のスクリプトは、列名 <strong>「チーム」</strong> と <strong>「年俸」</strong> を使います。  
-        列名が違う場合は <code>script.js</code> 内の <code>TEAM_COL</code> / <code>SALARY_COL</code> を変更してください。
+        使用する列：<strong>ポジション</strong>・<strong>チーム</strong>・<strong>年俸</strong><br>
+        列名はそれぞれ「ポジション」「チーム」「年俸」であることを前提としています。
       </p>
     </section>
 
+    <!-- 2. 表示の切り替え -->
     <section class="panel">
-      <h2>2. 分析モードの選択</h2>
+      <h2>2. 分析の視点と外れ値の扱い</h2>
       <div class="controls">
-        <label for="modeSelect">分析の見方：</label>
-        <select id="modeSelect">
-          <option value="normal">① そのまま全データを見る</option>
-          <option value="remove-team-outliers">② チームごとの外れ値を除外して見る（IQR法）</option>
-          <option value="remove-top10">③ 全体の年俸上位10人を除外して見る</option>
+        <label for="groupBySelect">分析する単位：</label>
+        <select id="groupBySelect">
+          <option value="team">チーム別</option>
+          <option value="position">ポジション別</option>
+        </select>
+
+        <label for="filterSelect">外れ値の扱い：</label>
+        <select id="filterSelect">
+          <option value="none">全データをそのまま使う</option>
+          <option value="group-outliers">各グループごとに外れ値を除外する</option>
+          <option value="top10">全体の年俸上位10名を除外する</option>
         </select>
       </div>
       <p id="modeDescription" class="note"></p>
     </section>
 
+    <!-- 3. 箱ひげ図 -->
     <section class="panel">
       <h2>3. 箱ひげ図</h2>
       <div id="chart" class="chart-container">
@@ -51,14 +59,13 @@
       </div>
     </section>
 
+    <!-- 4. データプレビュー -->
     <section class="panel">
       <h2>4. 読み込んだデータの一部</h2>
       <p class="note">
-        最初の数行だけを表示しています（列名の確認や、データが正しく読み込めたかを見るため）。
+        最初の数行だけを表示します（列名や読み込み確認用）。
       </p>
-      <div id="previewTableWrapper" class="table-wrapper">
-        <!-- データプレビューのテーブル -->
-      </div>
+      <div id="previewTableWrapper" class="table-wrapper"></div>
     </section>
   </main>
 
