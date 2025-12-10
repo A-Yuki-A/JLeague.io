@@ -14,8 +14,8 @@
   <header>
     <h1>Jリーグ年俸分析ツール（箱ひげ図）</h1>
     <p class="subtitle">
-      「順位・選手名・年齢・ポジション・チーム・年俸」の列を持つ Excel ファイル
-      <strong>Jリーグ年俸.xlsx</strong> をアップロードして分析します。
+      「順位・選手名・年齢・ポジション・チーム・年俸」の列をもつ
+      Excelファイル（Jリーグ年俸.xlsx）をアップロードして分析します。
     </p>
   </header>
 
@@ -26,12 +26,12 @@
       <p>Jリーグの年俸データ（.xlsx）ファイルを選択してください。</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls" />
       <p class="note">
-        使用する列：<strong>ポジション</strong>・<strong>チーム</strong>・<strong>年俸</strong><br>
-        列名はそれぞれ「ポジション」「チーム」「年俸」であることを前提としています。
+        使用する列名：<strong>ポジション</strong>・<strong>チーム</strong>・<strong>年俸</strong><br>
+        列名はそのまま「ポジション」「チーム」「年俸」であることを想定しています。
       </p>
     </section>
 
-    <!-- 2. 表示の切り替え -->
+    <!-- 2. 分析の視点と外れ値の扱い -->
     <section class="panel">
       <h2>2. 分析の視点と外れ値の扱い</h2>
       <div class="controls">
@@ -44,7 +44,7 @@
         <label for="filterSelect">外れ値の扱い：</label>
         <select id="filterSelect">
           <option value="none">全データをそのまま使う</option>
-          <option value="group-outliers">各グループごとに外れ値を除外する</option>
+          <option value="group-outliers">各グループの外れ値を除外する（IQR法）</option>
           <option value="top10">全体の年俸上位10名を除外する</option>
         </select>
       </div>
@@ -66,6 +66,13 @@
         最初の数行だけを表示します（列名や読み込み確認用）。
       </p>
       <div id="previewTableWrapper" class="table-wrapper"></div>
+    </section>
+
+    <!-- 5. 外れ値 / 上位10名 一覧 -->
+    <section class="panel">
+      <h2>5. 外れ値・上位10名の一覧</h2>
+      <p id="outlierNote" class="note"></p>
+      <div id="outlierTableWrapper" class="table-wrapper"></div>
     </section>
   </main>
 
