@@ -112,7 +112,7 @@ function handleFileSelect(event) {
 }
 
 // ==============================
-// データのプレビュー（先頭数行）
+// 読み込んだデータ（全行表示）
 // ==============================
 function showPreviewTable(data) {
   const wrapper = document.getElementById("previewTableWrapper");
@@ -130,6 +130,7 @@ function showPreviewTable(data) {
   const firstRow = data[0];
   const columns = Object.keys(firstRow);
 
+  // ヘッダ
   const trHead = document.createElement("tr");
   columns.forEach(col => {
     const th = document.createElement("th");
@@ -138,8 +139,8 @@ function showPreviewTable(data) {
   });
   thead.appendChild(trHead);
 
-  const maxRows = Math.min(10, data.length);
-  for (let i = 0; i < maxRows; i++) {
+  // ★ 全行を表示（スクロールはCSS側で制御）
+  for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const tr = document.createElement("tr");
     columns.forEach(col => {
@@ -256,9 +257,10 @@ function drawBoxplot(groupBy, filter) {
       y: d.values,
       type: "box",
       name: d.name,
-      // ★ここを変更：箱＋外れ値だけ表示（全部の点は表示しない）
+      // ★箱の幅を太めに
+      width: 0.8,
+      // ★外れ値だけ点で表示（全部の点をバラバラ出さない）
       boxpoints: "outliers",
-      width: 1.5,
       hovertemplate:
         `${groupBy === "team" ? "チーム" : "ポジション"}: ${d.name}` +
         "<br>年俸: %{y} 万円<extra></extra>"
@@ -273,6 +275,11 @@ function drawBoxplot(groupBy, filter) {
         tickangle: -45
       },
       yaxis: { title: "年俸（万円）" },
+      // ★凡例を消す（右側のチーム名一覧）
+      showlegend: false,
+      // ★箱と箱の間隔（微調整用）
+      boxgap: 0.2,
+      boxgroupgap: 0.1,
       margin: { l: 60, r: 20, t: 60, b: 140 },
       boxmode: "group"
     };
