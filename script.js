@@ -1,13 +1,13 @@
 // ==============================
-// 列名（Excelと合わせる）
+// グローバル変数
 // ==============================
-const TEAM_COL = "チーム";
-const POSITION_COL = "ポジション";
-const SALARY_COL = "年俸";
-const NAME_COL = "選手名";   // 外れ値一覧用
-
-// 読み込んだ生データ
 let rawData = [];
+
+// Excel上の実際の列名（自動検出してセット）
+let COL_TEAM = null;
+let COL_POSITION = null;
+let COL_SALARY = null;
+let COL_NAME = null;
 
 // ==============================
 // 初期化
@@ -23,8 +23,31 @@ window.addEventListener("DOMContentLoaded", () => {
 
   updateModeDescription();
   drawEmptyChart();
-  updateOutlierTable("team", "none");
 });
+
+// ==============================
+// 列名の自動検出
+// ==============================
+function detectColumns(data) {
+  const first = data.find(row => Object.keys(row).length > 0);
+  if (!first) return false;
+
+  const keys = Object.keys(first);
+
+  COL_TEAM     = keys.find(k => k.includes("チーム"));
+  COL_POSITION = keys.find(k => k.includes("ポジション"));
+  COL_SALARY   = keys.find(k => k.includes("年俸"));
+  COL_NAME     = keys.find(k => k.includes("選手名")) || null;
+
+  if (!COL_TEAM || !COL_POSITION || !COL_SALARY) {
+    alert("「チーム」「ポジション」「年俸」を含む列が見つかりませんでした。列名を確認してください。");
+    console.log("見つかった列名一覧:", keys);
+    return false;
+  }
+
+  console.log("検出された列:", { COL_TEAM, COL_POSITION, COL_SALARY, COL_NAME });
+  return true;
+}
 
 // ==============================
 // 説明テキストの更新
@@ -35,7 +58,6 @@ function updateModeDescription() {
   const desc = document.getElementById("modeDescription");
 
   const unitText = groupBy === "team" ? "チーム" : "ポジション";
-
   let text = `現在：${unitText}別に年俸を箱ひげ図で表示します。`;
 
   if (filter === "none") {
@@ -65,10 +87,19 @@ function handleFileSelect(event) {
       const firstSheetName = workbook.SheetNames[0];
       const firstSheet = workbook.Sheets[firstSheetName];
 
-      // シート全体を JSON に変換
       const json = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
 
       rawData = json;
+
+      if (!detectColumns(rawData)) {
+        rawData = [];
+        drawEmptyChart();
+        document.getElementById("previewTableWrapper").innerHTML = "";
+        document.getElementById("outlierTableWrapper").innerHTML = "";
+        document.getElementById("outlierNote").textContent = "";
+        return;
+      }
+
       showPreviewTable(rawData);
       updateAnalysis();
     } catch (err) {
@@ -125,7 +156,7 @@ function showPreviewTable(data) {
 }
 
 // ==============================
-// 分析更新（グループ・フィルタの切替など）
+// 分析更新
 // ==============================
 function updateAnalysis() {
   updateModeDescription();
@@ -158,54 +189,44 @@ function drawEmptyChart() {
 
 // ==============================
 // 箱ひげ図の描画
-// groupBy: "team" | "position"
-// filter: "none" | "group-outliers" | "top10"
 // ==============================
 function drawBoxplot(groupBy, filter) {
   try {
-    // 1. 上位10名除外のために、インデックス集合を作る
-    let top10IndexSet = null;
+    const groupKeyName = groupBy === "team" ? COL_TEAM : COL_POSITION;
 
+    // 1. 上位10名除外用セット
+    let top10IndexSet = null;
     if (filter === "top10") {
       const salaryWithIndex = [];
-
       rawData.forEach((row, idx) => {
-        let sal = parseSalary(row[SALARY_COL]);
-        if (!isNaN(sal)) {
-          salaryWithIndex.push({ idx: idx, salary: sal });
-        }
+        const sal = parseSalary(row[COL_SALARY]);
+        if (!isNaN(sal)) salaryWithIndex.push({ idx, salary: sal });
       });
-
-      salaryWithIndex.sort((a, b) => b.salary - a.salary); // 高い順
+      salaryWithIndex.sort((a, b) => b.salary - a.salary);
       const top10 = salaryWithIndex.slice(0, 10);
-      top10IndexSet = new Set(top10.map(obj => obj.idx));
+      top10IndexSet = new Set(top10.map(o => o.idx));
     }
 
-    // 2. グループ化（チーム別 or ポジション別）
-    const groupMap = new Map(); // key: グループ名, value: 配列（年俸）
+    // 2. グループ化
+    const groupMap = new Map();
 
     rawData.forEach((row, idx) => {
-      const groupKey =
-        groupBy === "team" ? row[TEAM_COL] : row[POSITION_COL];
-
-      let sal = parseSalary(row[SALARY_COL]);
-
+      const groupKey = row[groupKeyName];
+      const sal = parseSalary(row[COL_SALARY]);
       if (!groupKey || isNaN(sal)) return;
 
-      // 全体上位10名を除外する場合
       if (filter === "top10" && top10IndexSet && top10IndexSet.has(idx)) {
         return;
       }
 
-      if (!groupMap.has(groupKey)) {
-        groupMap.set(groupKey, []);
-      }
+      if (!groupMap.has(groupKey)) groupMap.set(groupKey, []);
       groupMap.get(groupKey).push(sal);
     });
 
-    // 3. 各グループで外れ値除外（必要なとき）
-    const groupDataArray = []; // { name, values }
+    console.log("グループ数:", groupMap.size);
 
+    // 3. 外れ値除外（IQR）
+    const groupDataArray = [];
     groupMap.forEach((values, name) => {
       let arr = values.slice().sort((a, b) => a - b);
 
@@ -215,33 +236,28 @@ function drawBoxplot(groupBy, filter) {
         const iqr = q3 - q1;
         const lower = q1 - 1.5 * iqr;
         const upper = q3 + 1.5 * iqr;
-
         arr = arr.filter(v => v >= lower && v <= upper);
       }
 
-      if (arr.length > 0) {
-        groupDataArray.push({ name, values: arr });
-      }
+      if (arr.length > 0) groupDataArray.push({ name, values: arr });
     });
+
+    console.log("箱ひげ図に使うグループ:", groupDataArray.length);
 
     if (groupDataArray.length === 0) {
       drawEmptyChart();
       return;
     }
 
-    // 4. グループを中央値の高い順に並べる
-    groupDataArray.sort(
-      (a, b) => median(b.values) - median(a.values)
-    );
+    // 中央値の高い順に並べ替え
+    groupDataArray.sort((a, b) => median(b.values) - median(a.values));
 
-    // 5. Plotlyのトレース
     const traces = groupDataArray.map(d => ({
       y: d.values,
       type: "box",
       name: d.name,
-      boxpoints: "all",
-      jitter: 0.3,
-      pointpos: -1.5,
+      // ★ここを変更：箱＋外れ値だけ表示（全部の点は表示しない）
+      boxpoints: "outliers",
       hovertemplate:
         `${groupBy === "team" ? "チーム" : "ポジション"}: ${d.name}` +
         "<br>年俸: %{y} 万円<extra></extra>"
@@ -255,9 +271,7 @@ function drawBoxplot(groupBy, filter) {
         title: groupBy === "team" ? "チーム" : "ポジション",
         tickangle: -45
       },
-      yaxis: {
-        title: "年俸（万円）"
-      },
+      yaxis: { title: "年俸（万円）" },
       margin: { l: 60, r: 20, t: 60, b: 140 },
       boxmode: "group"
     };
@@ -265,12 +279,12 @@ function drawBoxplot(groupBy, filter) {
     Plotly.newPlot("chart", traces, layout, { responsive: true });
   } catch (err) {
     console.error("箱ひげ図描画エラー:", err);
-    alert("箱ひげ図の描画でエラーが発生しました。コンソールのエラー表示を確認してください。");
+    alert("箱ひげ図の描画でエラーが発生しました。コンソールのエラーを確認してください。");
   }
 }
 
 // ==============================
-// 外れ値 / 上位10名 一覧の更新
+// 外れ値 / 上位10名 一覧
 // ==============================
 function updateOutlierTable(groupBy, filter) {
   const note = document.getElementById("outlierNote");
@@ -283,39 +297,31 @@ function updateOutlierTable(groupBy, filter) {
   }
 
   const unitText = groupBy === "team" ? "チーム" : "ポジション";
+  const groupKeyName = groupBy === "team" ? COL_TEAM : COL_POSITION;
 
   if (filter === "none") {
     note.textContent =
-      "外れ値の一覧は、「各グループの外れ値を除外」または「上位10名を除外」を選んだときに表示されます。";
+      "外れ値の一覧は「各グループの外れ値を除外」または「上位10名を除外」を選んだときに表示されます。";
     return;
   }
 
-  // 一覧用データ
   let list = [];
 
   if (filter === "group-outliers") {
     note.textContent =
       `各${unitText}の中で IQR 法により外れ値と判定された選手の一覧です。`;
 
-    // グループごとに [ {idx, salary} ] を持つ
     const groupMap = new Map();
-
     rawData.forEach((row, idx) => {
-      const groupKey =
-        groupBy === "team" ? row[TEAM_COL] : row[POSITION_COL];
-      const sal = parseSalary(row[SALARY_COL]);
+      const groupKey = row[groupKeyName];
+      const sal = parseSalary(row[COL_SALARY]);
       if (!groupKey || isNaN(sal)) return;
-
-      if (!groupMap.has(groupKey)) {
-        groupMap.set(groupKey, []);
-      }
+      if (!groupMap.has(groupKey)) groupMap.set(groupKey, []);
       groupMap.get(groupKey).push({ idx, salary: sal });
     });
 
     groupMap.forEach((arr, groupKey) => {
       if (arr.length < 4) return;
-
-      // 給料だけ取り出してソート
       const salaries = arr.map(o => o.salary).sort((a, b) => a - b);
       const q1 = quantile(salaries, 0.25);
       const q3 = quantile(salaries, 0.75);
@@ -328,27 +334,22 @@ function updateOutlierTable(groupBy, filter) {
           const row = rawData[o.idx];
           list.push({
             groupKey,
-            name: row[NAME_COL],
-            team: row[TEAM_COL],
-            position: row[POSITION_COL],
+            name: COL_NAME ? row[COL_NAME] : "",
+            team: row[COL_TEAM],
+            position: row[COL_POSITION],
             salary: o.salary
           });
         }
       });
     });
   } else if (filter === "top10") {
-    note.textContent =
-      "リーグ全体の年俸上位10名の一覧です。";
+    note.textContent = "リーグ全体の年俸上位10名の一覧です。";
 
     const salaryWithIndex = [];
-
     rawData.forEach((row, idx) => {
-      const sal = parseSalary(row[SALARY_COL]);
-      if (!isNaN(sal)) {
-        salaryWithIndex.push({ idx, salary: sal });
-      }
+      const sal = parseSalary(row[COL_SALARY]);
+      if (!isNaN(sal)) salaryWithIndex.push({ idx, salary: sal });
     });
-
     salaryWithIndex.sort((a, b) => b.salary - a.salary);
     const top10 = salaryWithIndex.slice(0, 10);
 
@@ -356,11 +357,9 @@ function updateOutlierTable(groupBy, filter) {
       const row = rawData[o.idx];
       return {
         rank: rank + 1,
-        groupKey:
-          groupBy === "team" ? row[TEAM_COL] : row[POSITION_COL],
-        name: row[NAME_COL],
-        team: row[TEAM_COL],
-        position: row[POSITION_COL],
+        name: COL_NAME ? row[COL_NAME] : "",
+        team: row[COL_TEAM],
+        position: row[COL_POSITION],
         salary: o.salary
       };
     });
@@ -371,11 +370,9 @@ function updateOutlierTable(groupBy, filter) {
     return;
   }
 
-  // テーブル生成
   const table = document.createElement("table");
   const thead = document.createElement("thead");
   const tbody = document.createElement("tbody");
-
   const headerRow = document.createElement("tr");
 
   let headers;
@@ -426,46 +423,31 @@ function addCell(tr, text) {
 // ==============================
 function parseSalary(value) {
   if (value == null) return NaN;
-
   if (typeof value === "number") return value;
-
   if (typeof value === "string") {
-    const cleaned = value
-      .replace(/,/g, "")
-      .replace(/[^\d.]/g, ""); // 数字以外除去
+    const cleaned = value.replace(/,/g, "").replace(/[^\d.]/g, "");
     const num = parseFloat(cleaned);
     return num;
   }
   return NaN;
 }
 
-// 分位数（0〜1）: sortedArray は昇順ソート済み
 function quantile(sortedArray, p) {
   const n = sortedArray.length;
   if (n === 0) return NaN;
-
   const index = (n - 1) * p;
   const lower = Math.floor(index);
   const upper = Math.ceil(index);
-
-  if (lower === upper) {
-    return sortedArray[lower];
-  } else {
-    const weight = index - lower;
-    return (
-      sortedArray[lower] * (1 - weight) +
-      sortedArray[upper] * weight
-    );
-  }
+  if (lower === upper) return sortedArray[lower];
+  const weight = index - lower;
+  return sortedArray[lower] * (1 - weight) + sortedArray[upper] * weight;
 }
 
-// 中央値
 function median(arr) {
   if (!arr || arr.length === 0) return NaN;
   const sorted = arr.slice().sort((a, b) => a - b);
   const n = sorted.length;
   const mid = Math.floor(n / 2);
-
   if (n % 2 === 0) {
     return (sorted[mid - 1] + sorted[mid]) / 2;
   } else {
