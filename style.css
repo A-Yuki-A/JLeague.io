@@ -3,7 +3,8 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", "ヒラギノ角ゴ ProN", "Meiryo", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Yu Gothic", "ヒラギノ角ゴ ProN", "Meiryo", sans-serif;
   margin: 0;
   padding: 0;
   background: #f4f6fb;
@@ -50,9 +51,9 @@ main {
 
 .controls {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
 }
 
 .controls label {
@@ -74,8 +75,9 @@ main {
   min-height: 450px;
 }
 
+/* 読み込んだデータ・外れ値一覧のテーブル用 */
 .table-wrapper {
-  max-height: 260px;
+  max-height: 320px;   /* スクロール量は好みで調整可 */
   overflow: auto;
   border: 1px solid #ddd;
   border-radius: 6px;
