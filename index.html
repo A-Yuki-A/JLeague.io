@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Jリーグ年俸分析ツール（箱ひげ図）</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Plotly（箱ひげ図用） -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <!-- SheetJS（Excel読込用） -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Jリーグ年俸分析ツール（箱ひげ図）</h1>
+    <p class="subtitle">
+      Excelファイル「Jリーグ年俸.xlsx」をアップロードして、チームごとの年俸を箱ひげ図で分析できます。
+    </p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>1. データのアップロード</h2>
+      <p>
+        年俸データ（例：<strong>順位, 選手名, 年齢, ポジション, チーム, 年俸</strong> の列を持つファイル）を選択してください。
+      </p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" />
+      <p class="note">
+        ※現在のスクリプトは、列名 <strong>「チーム」</strong> と <strong>「年俸」</strong> を使います。  
+        列名が違う場合は <code>script.js</code> 内の <code>TEAM_COL</code> / <code>SALARY_COL</code> を変更してください。
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>2. 分析モードの選択</h2>
+      <div class="controls">
+        <label for="modeSelect">分析の見方：</label>
+        <select id="modeSelect">
+          <option value="normal">① そのまま全データを見る</option>
+          <option value="remove-team-outliers">② チームごとの外れ値を除外して見る（IQR法）</option>
+          <option value="remove-top10">③ 全体の年俸上位10人を除外して見る</option>
+        </select>
+      </div>
+      <p id="modeDescription" class="note"></p>
+    </section>
+
+    <section class="panel">
+      <h2>3. 箱ひげ図</h2>
+      <div id="chart" class="chart-container">
+        <!-- Plotly がここに描画されます -->
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>4. 読み込んだデータの一部</h2>
+      <p class="note">
+        最初の数行だけを表示しています（列名の確認や、データが正しく読み込めたかを見るため）。
+      </p>
+      <div id="previewTableWrapper" class="table-wrapper">
+        <!-- データプレビューのテーブル -->
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Jリーグ年俸データ分析サンプル</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
