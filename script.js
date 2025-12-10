@@ -258,7 +258,7 @@ function drawBoxplot(groupBy, filter) {
       name: d.name,
       // ★ここを変更：箱＋外れ値だけ表示（全部の点は表示しない）
       boxpoints: "outliers",
-      width: 0.8,
+      width: 1.5,
       hovertemplate:
         `${groupBy === "team" ? "チーム" : "ポジション"}: ${d.name}` +
         "<br>年俸: %{y} 万円<extra></extra>"
