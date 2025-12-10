@@ -25,10 +25,6 @@
       <h2>1. データのアップロード</h2>
       <p>Jリーグの年俸データ（.xlsx）ファイルを選択してください。</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls" />
-      <p class="note">
-        使用する列名：<strong>ポジション</strong>・<strong>チーム</strong>・<strong>年俸</strong><br>
-        列名はそのまま「ポジション」「チーム」「年俸」であることを想定しています。
-      </p>
     </section>
 
     <!-- 2. 分析の視点と外れ値の扱い -->
@@ -54,16 +50,14 @@
     <!-- 3. 箱ひげ図 -->
     <section class="panel">
       <h2>3. 箱ひげ図</h2>
-      <div id="chart" class="chart-container">
-        <!-- Plotly がここに描画されます -->
-      </div>
+      <div id="chart" class="chart-container"></div>
     </section>
 
-    <!-- 4. データプレビュー -->
+    <!-- 4. 読み込んだデータ（全件スクロール表示） -->
     <section class="panel">
-      <h2>4. 読み込んだデータの一部</h2>
+      <h2>4. 読み込んだデータ</h2>
       <p class="note">
-        最初の数行だけを表示します（列名や読み込み確認用）。
+        読み込んだすべての行を表示します（スクロールで確認できます）。
       </p>
       <div id="previewTableWrapper" class="table-wrapper"></div>
     </section>
