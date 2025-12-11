@@ -65,10 +65,18 @@ function updateModeDescription() {
   } else if (filter === "group-outliers") {
     text += ` 各${unitText}の中で四分位範囲（IQR）に基づき外れ値を除外して表示します。`;
   } else if (filter === "top10") {
-    text += " リーグ全体の年俸上位10名を一度取り除いてから表示します。";
+    text += " リーグ全体の年俸上位10名を除外して表示します。";
   }
 
   desc.textContent = text;
+
+  // IQR 説明の表示／非表示
+  const iqrDesc = document.getElementById("iqrDescription");
+  if (filter === "group-outliers") {
+    iqrDesc.style.display = "block";
+  } else {
+    iqrDesc.style.display = "none";
+  }
 }
 
 // ==============================
@@ -139,7 +147,7 @@ function showPreviewTable(data) {
   });
   thead.appendChild(trHead);
 
-  // ★ 全行を表示（スクロールはCSS側で制御）
+  // 全行を表示（スクロールはCSS側で制御）
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const tr = document.createElement("tr");
@@ -257,9 +265,9 @@ function drawBoxplot(groupBy, filter) {
       y: d.values,
       type: "box",
       name: d.name,
-      // ★箱の幅を太めに
+      // 箱の幅を太めに
       width: 0.8,
-      // ★外れ値だけ点で表示（全部の点をバラバラ出さない）
+      // 外れ値だけ点で表示
       boxpoints: "outliers",
       hovertemplate:
         `${groupBy === "team" ? "チーム" : "ポジション"}: ${d.name}` +
@@ -275,9 +283,8 @@ function drawBoxplot(groupBy, filter) {
         tickangle: -45
       },
       yaxis: { title: "年俸（万円）" },
-      // ★凡例を消す（右側のチーム名一覧）
+      // 右側の凡例を消す
       showlegend: false,
-      // ★箱と箱の間隔（微調整用）
       boxgap: 0.2,
       boxgroupgap: 0.1,
       margin: { l: 60, r: 20, t: 60, b: 140 },
